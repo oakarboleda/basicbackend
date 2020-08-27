@@ -1,25 +1,44 @@
-var mongoose = require("mongoose");
+const MongoClient = require('mongodb').MongoClient;
 
-mongoose.connect(process.env.MONGODB_URL);
+const url =
+  'mongodb+srv://oak:y0LIIXlMWnNP0XOG@cluster0.czs2w.mongodb.net/sample_geospatial?retryWrites=true&w=majority';
 
-mongoose.connection.on("connected", function() {
-  console.log("Mongoose default connection open");
-});
+const createShipwreck = async (req, res, next) => {
+  const newShipwreck = {
+    name: req.body.name,
+    latdec: req.body.latdec,
+    londec: req.body.londec
+  };
+  const client = new MongoClient(url);
 
-mongoose.connection.on("error", function(err) {
+  try {
+    await client.connect();
+    const db = client.db();
+    const result = db.collection('Shipwrecks').insertOne(newShipwreck);
+  } catch (error) {
+    return res.json({message: 'Could not store data.'});
+  };
+  client.close();
 
-  console.log("Mongoose default connection error: " + err);
-});
+  res.json(newShipwreck);
+};
 
-mongoose.connection.on("disconnected", function() {
-  console.log("Mongoose default connection disconnected");
-});
+const getShipwreck = async (req, res, next) => {
+  const client = new MongoClient(url);
 
-process.on("SIGINT", function() {
-  mongoose.connection.close(function() {
-    console.log(
-      "Mongoose default connection disconnected through app termination"
-    );
-    process.exit(0);
-  });
-});
+  let Shipwrecks;
+
+  try {
+    await client.connect();
+    const db = client.db();
+    Shipwrecks = await db.collection('Shipwrecks').find().toArray();
+  } catch (error) {
+    return res.json({message: 'Could not retrieve products.'});
+  };
+  client.close();
+
+  res.json(Shipwrecks);
+};
+
+exports.createShipwreck = createShipwreck;
+exports.getShipwreck = getShipwreck;

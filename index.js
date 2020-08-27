@@ -1,36 +1,37 @@
-require("dotenv").config({ path: __dirname + "/.env" });
+//require("dotenv").config({ path: __dirname + "/.env" });
 const express = require("express");
+const bodyParser = require("body-parser");
+const mongoose = require("mongoose");
+
+const placesRoutes = require('./routes/places-routes');
+const usersRoutes = require('./routes/users-routes');
+const HttpError = require('./models/http-error');
 
 const app = express();
-const bodyParser = require("body-parser");
-const cors = require("cors");
 
-require('./db');
-const jwt = require("./jwt");
-
-const Users = require("./models/user_schema");
-var allowedOrigins = ['http://localhost:3000'];
-app.use(cors({
-  origin: function (origin, callback) {
-    // allow requests with no origin
-    // (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      var msg = 'The CORS policy for this site does not ' +
-        'allow access from the specified Origin.';
-      return res.json({ status: 'error', msg });
-    }
-    return callback(null, true);
-  }
-}));
-
-
-app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+app.use('/api/places', placesRoutes);
+app.use('/api/users', usersRoutes);
 
-app.use("/api/v1", require("./api"));
-
-const port = process.env.PORT || 8080;
-app.listen(port, () => {
-  console.log("Server is running... on port " + port);
+app.use((req, res, next) => {
+  const error = new HttpError('Could not find this route.', 404);
+  throw error;
 });
+
+app.use((error, req, res, next) => {
+  if (res.headerSent) {
+    return next(error);
+  }
+  res.status(error.code || 500);
+  res.json({ message: error.message || 'An unknown error occurred!' });
+});
+
+
+mongoose
+  .connect('mongodb+srv://oak:y0LIIXlMWnNP0XOG@cluster0.czs2w.mongodb.net/basic?retryWrites=true&w=majority')
+  .then(() => {
+    app.listen(5000);
+  })
+  .catch(err => {
+    console.log(err);
+  });
